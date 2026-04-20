@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte de Ventas — Philips & Versuni</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F5F3EE;
+    --surface: #FFFFFF;
+    --surface2: #EDEBE5;
+    --text: #1A1916;
+    --text2: #6B6860;
+    --text3: #9E9C96;
+    --border: rgba(26,25,22,.1);
+    --blue: #1A4FD4;
+    --blue-light: #E8EEFA;
+    --teal: #0A7A5A;
+    --teal-light: #E3F5EE;
+    --red: #C0392B;
+    --red-light: #FAEAE8;
+    --amber: #B45309;
+    --amber-light: #FEF3E2;
+    --radius: 10px;
+  }
+  body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  
+  header { padding: 3rem 3rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; justify-content: space-between; }
+  .header-left { display: flex; align-items: center; gap: 1.5rem; }
+  .header-logo { height: 48px; width: auto; }
+  .header-left h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
+  .header-left p { color: var(--text2); font-size: .9rem; margin-top: .4rem; font-family: 'DM Mono', monospace; }
+  .header-badge { background: var(--text); color: var(--bg); padding: .5rem 1rem; border-radius: 100px; font-family: 'DM Mono', monospace; font-size: .75rem; }
+
+  nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 3rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  nav::-webkit-scrollbar { display: none; }
+  .nav-tab { padding: .9rem 1.4rem; font-size: .85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text2); transition: all .2s; letter-spacing: .01em; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Syne', sans-serif; }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--text); border-bottom-color: var(--text); }
+
+  main { padding: 2.5rem 3rem; max-width: 1200px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; }
+  .metric-card .label { font-family: 'DM Mono', monospace; font-size: .7rem; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
+  .metric-card .value { font-size: 1.8rem; font-weight: 700; color: var(--text); letter-spacing: -.03em; line-height: 1; }
+  .metric-card .sub { font-size: .78rem; color: var(--text2); margin-top: .3rem; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+  .card-title { font-size: .8rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 1.2rem; font-family: 'DM Mono', monospace; }
+  .chart-wrap { position: relative; width: 100%; height: 240px; }
+
+  .cat-list { display: flex; flex-direction: column; gap: 8px; }
+  .cat-item { display: flex; align-items: center; gap: 10px; }
+  .cat-name { font-size: .8rem; width: 140px; flex-shrink: 0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'DM Mono', monospace; }
+  .bar-bg { flex: 1; background: var(--surface2); border-radius: 3px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .cat-num { font-family: 'DM Mono', monospace; font-size: .75rem; color: var(--text2); width: 45px; text-align: right; }
+  .badge { font-size: .65rem; font-family: 'DM Mono', monospace; padding: 2px 7px; border-radius: 100px; white-space: nowrap; }
+  .badge-up { background: var(--teal-light); color: var(--teal); }
+  .badge-down { background: var(--red-light); color: var(--red); }
+  .badge-flat { background: var(--surface2); color: var(--text2); }
+
+  .full-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 2rem; }
+  .select-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  select { font-family: 'DM Mono', monospace; font-size: .8rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+  select:focus { outline: 2px solid var(--blue); }
+
+  .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .insight-card { border-radius: var(--radius); padding: 1.25rem; border: 1px solid transparent; }
+  .insight-card.warn { background: var(--red-light); border-color: rgba(192,57,43,.15); }
+  .insight-card.good { background: var(--teal-light); border-color: rgba(10,122,90,.15); }
+  .insight-card.info { background: var(--blue-light); border-color: rgba(26,79,212,.15); }
+  .insight-card .i-label { font-size: .68rem; font-family: 'DM Mono', monospace; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; margin-bottom: .5rem; }
+  .insight-card.warn .i-label { color: var(--red); }
+  .insight-card.good .i-label { color: var(--teal); }
+  .insight-card.info .i-label { color: var(--blue); }
+  .insight-card .i-text { font-size: .82rem; color: var(--text); line-height: 1.5; }
+
+  .section-label { font-family: 'DM Mono', monospace; font-size: .7rem; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1rem; margin-top: 2rem; }
+
+  .legend { display: flex; gap: 1.5rem; margin-top: .8rem; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 6px; font-size: .75rem; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  footer { margin: 3rem 3rem 2rem; border-top: 1px solid var(--border); padding-top: 1.2rem; font-family: 'DM Mono', monospace; font-size: .7rem; color: var(--text3); }
+
+  /* SKU Table */
+  .sku-table-wrap { margin-top: 1.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sku-table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: .75rem; }
+  .sku-table thead tr { border-bottom: 2px solid var(--border); }
+  .sku-table th { text-align: left; padding: .5rem .75rem; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; font-size: .68rem; font-weight: 500; }
+  .sku-table th.num { text-align: right; }
+  .sku-table td { padding: .45rem .75rem; color: var(--text2); border-bottom: 1px solid var(--border); }
+  .sku-table td.code { color: var(--text); font-weight: 500; white-space: nowrap; }
+  .sku-table td.desc { color: var(--text); max-width: 320px; }
+  .sku-table td.num { text-align: right; color: var(--text); }
+  .sku-table td.zero { text-align: right; color: var(--text3); }
+  .sku-table tr:last-child td { border-bottom: none; }
+  .sku-table tr.total-row td { font-weight: 700; color: var(--text); border-top: 2px solid var(--border); border-bottom: none; }
+  .disc-badge { display: inline-block; font-size: .6rem; padding: 1px 6px; border-radius: 100px; background: var(--red-light); color: var(--red); font-family: 'DM Mono', monospace; margin-left: 4px; vertical-align: middle; }
+  .stock-badge { display: inline-block; font-size: .72rem; font-family: 'DM Mono', monospace; color: var(--text2); }
+  .stock-ok { color: var(--teal); }
+  .stock-zero { color: var(--text3); }
+
+  /* Cobertura tab */
+  .cob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+  .cob-table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: .75rem; margin-top: .5rem; }
+  .cob-table th { text-align: left; padding: .45rem .6rem; color: var(--text3); text-transform: uppercase; font-size: .65rem; letter-spacing: .06em; border-bottom: 2px solid var(--border); }
+  .cob-table th.num { text-align: right; }
+  .cob-table td { padding: .4rem .6rem; border-bottom: 1px solid var(--border); color: var(--text2); }
+  .cob-table td.cat { color: var(--text); font-size: .73rem; }
+  .cob-table td.num { text-align: right; }
+  .cob-table tr:last-child td { border-bottom: none; }
+  .cob-table tr.avg-row td { font-weight: 700; color: var(--text); border-top: 2px solid var(--border); }
+
+  /* Stock summary */
+  .stock-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stock-cat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
+  .stock-cat-card .sc-name { font-family: 'DM Mono', monospace; font-size: .7rem; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+  .stock-cat-card .sc-val { font-size: 1.4rem; font-weight: 700; color: var(--text); letter-spacing: -.02em; }
+  .stock-cat-card .sc-sub { font-size: .72rem; color: var(--text2); margin-top: .2rem; font-family: 'DM Mono', monospace; }
+
+  /* ── TABLET (≤900px) ── */
+  @media (max-width: 900px) {
+    header, main { padding-left: 1.5rem; padding-right: 1.5rem; }
+    nav { padding: 0 1.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .insight-grid { grid-template-columns: 1fr 1fr; }
+    .cob-grid { grid-template-columns: 1fr; }
+    .stock-summary { grid-template-columns: repeat(2,1fr); }
+  }
+
+  /* ── MOBILE (≤600px) ── */
+  @media (max-width: 600px) {
+    header { padding: 1.4rem 1rem 1.2rem; flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: row; align-items: center; gap: 1rem; }
+    .header-logo { height: 36px; }
+    .header-left h1 { font-size: 1.45rem; }
+    .header-left p { font-size: .75rem; }
+    .header-badge { display: none; }
+
+    nav { padding: 0 1rem; gap: 0; }
+    .nav-tab { padding: .75rem .85rem; font-size: .75rem; white-space: nowrap; flex-shrink: 0; }
+
+    main { padding: 1.2rem 1rem; }
+
+    .metrics-grid { grid-template-columns: 1fr 1fr; gap: .65rem; margin-bottom: 1.2rem; }
+    .metric-card { padding: 1rem 1rem; }
+    .metric-card .value { font-size: 1.4rem; }
+    .metric-card .label { font-size: .62rem; }
+    .metric-card .sub { font-size: .7rem; }
+
+    .two-col { grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.2rem; }
+    .card { padding: 1rem; }
+    .chart-wrap { height: 190px !important; }
+
+    .full-card { padding: 1rem; margin-bottom: 1.2rem; }
+    .select-row { flex-direction: column; align-items: flex-start; gap: .6rem; }
+    select { width: 100%; font-size: .8rem; }
+
+    .cat-name { width: 100px; font-size: .72rem; }
+    .cat-num { width: 38px; font-size: .7rem; }
+
+    .insight-grid { grid-template-columns: 1fr; gap: .75rem; }
+    .insight-card { padding: 1rem; }
+
+    .section-label { margin-top: 1.2rem; margin-bottom: .6rem; }
+
+    /* SKU table — hide Estado col, shrink */
+    .sku-table { font-size: .68rem; }
+    .sku-table th, .sku-table td { padding: .38rem .4rem; }
+    .sku-table td.desc { max-width: 160px; font-size: .67rem; }
+    .sku-table th:last-child,
+    .sku-table td:last-child { display: none; }
+
+    /* Cobertura tables — make horizontally scrollable */
+    .full-card .cob-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .cob-table { font-size: .67rem; min-width: 480px; }
+    .cob-table th, .cob-table td { padding: .35rem .45rem; }
+
+    .stock-summary { grid-template-columns: 1fr 1fr; gap: .65rem; }
+
+    footer { margin: 1.5rem 1rem 1rem; font-size: .65rem; }
+  }
+
+  /* ── VERY SMALL (≤380px) ── */
+  @media (max-width: 380px) {
+    .metrics-grid { grid-template-columns: 1fr; }
+    .nav-tab { padding: .7rem .7rem; font-size: .7rem; }
+    .header-left h1 { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <img src="https://www.cph.com.py/uploads/philips-l-1754587728.png" alt="Philips" class="header-logo">
+    <div>
+      <h1>Análisis de Ventas<br>por Categoría</h1>
+      <p>PHILIPS CHILENA S.A. + VERSUNI CHILE S.A. — 2021–2026</p>
+    </div>
+  </div>
+  <div class="header-badge">Reporte interactivo</div>
+</header>
+
+<nav>
+  <button class="nav-tab active" onclick="switchTab('philips', this)">Philips Chilena</button>
+  <button class="nav-tab" onclick="switchTab('versuni', this)">Versuni Chile</button>
+  <button class="nav-tab" onclick="switchTab('comparar', this)">Comparativa</button>
+  <button class="nav-tab" onclick="switchTab('cobertura', this)">Cobertura</button>
+  <button class="nav-tab" onclick="switchTab('insights', this)">Insights</button>
+</nav>
+
+<main>
+
+<!-- PHILIPS PANEL -->
+<div id="panel-philips" class="panel active">
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="label">Total 2021–2025</div><div class="value">127K</div><div class="sub">unidades acumuladas</div></div>
+    <div class="metric-card"><div class="label">Año pico</div><div class="value">2021</div><div class="sub">29.409 unidades</div></div>
+    <div class="metric-card"><div class="label">Caída 2021→2024</div><div class="value">−26%</div><div class="sub">recuperó en 2025</div></div>
+    <div class="metric-card"><div class="label">Top categoría</div><div class="value">Oneblades</div><div class="sub">crecimiento constante</div></div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Ventas totales por año</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="p-totals" role="img" aria-label="Ventas totales Philips por año">Ventas Philips 2021-2026.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Categorías principales (acumulado 2021–2025)</div>
+      <div class="cat-list" id="p-catlist"></div>
+    </div>
+  </div>
+
+  <div class="full-card">
+    <div class="select-row">
+      <div class="card-title" style="margin:0">Desglose por categoría y SKU</div>
+      <select id="p-sel" onchange="updateLine('p', this.value)"></select>
+    </div>
+    <div class="chart-wrap"><canvas id="p-line" role="img" aria-label="Evolución de categoría Philips">Ventas por año.</canvas></div>
+    <div class="sku-table-wrap" id="p-sku-wrap"></div>
+  </div>
+</div>
+
+<!-- VERSUNI PANEL -->
+<div id="panel-versuni" class="panel">
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="label">Total 2021–2025</div><div class="value">157K</div><div class="sub">unidades acumuladas</div></div>
+    <div class="metric-card"><div class="label">Año pico</div><div class="value">2024</div><div class="sub">36.409 unidades</div></div>
+    <div class="metric-card"><div class="label">Crecimiento 2021→2024</div><div class="value">+130%</div><div class="sub">crecimiento acelerado</div></div>
+    <div class="metric-card"><div class="label">Top categoría</div><div class="value">Licuadoras</div><div class="sub">dominante del portafolio</div></div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Ventas totales por año</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="v-totals" role="img" aria-label="Ventas totales Versuni por año">Ventas Versuni 2021-2026.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Categorías principales (acumulado 2021–2025)</div>
+      <div class="cat-list" id="v-catlist"></div>
+    </div>
+  </div>
+
+  <div class="full-card">
+    <div class="select-row">
+      <div class="card-title" style="margin:0">Desglose por categoría y SKU</div>
+      <select id="v-sel" onchange="updateLine('v', this.value)"></select>
+    </div>
+    <div class="chart-wrap"><canvas id="v-line" role="img" aria-label="Evolución de categoría Versuni">Ventas por año.</canvas></div>
+    <div class="sku-table-wrap" id="v-sku-wrap"></div>
+  </div>
+</div>
+
+<!-- COMPARAR PANEL -->
+<div id="panel-comparar" class="panel">
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="label">Philips 2021–2025</div><div class="value">127K</div><div class="sub">unidades</div></div>
+    <div class="metric-card"><div class="label">Versuni 2021–2025</div><div class="value">157K</div><div class="sub">unidades</div></div>
+    <div class="metric-card"><div class="label">Diferencia 2025</div><div class="value">+6.9K</div><div class="sub">Versuni por encima</div></div>
+    <div class="metric-card"><div class="label">Cruce de liderazgo</div><div class="value">2022</div><div class="sub">Versuni supera a Philips</div></div>
+  </div>
+
+  <div class="full-card">
+    <div class="card-title">Evolución comparativa de ventas totales</div>
+    <div class="chart-wrap" style="height:300px"><canvas id="c-compare" role="img" aria-label="Comparación ventas anuales entre proveedores">Comparación anual.</canvas></div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#1A4FD4"></div>Philips Chilena</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#0A7A5A"></div>Versuni Chile</div>
+    </div>
+  </div>
+
+  <div class="full-card">
+    <div class="card-title">Participación relativa por año (%)</div>
+    <div class="chart-wrap" style="height:240px"><canvas id="c-share" role="img" aria-label="Participación relativa de ventas entre proveedores">Participación por año.</canvas></div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#1A4FD4"></div>Philips Chilena</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#0A7A5A"></div>Versuni Chile</div>
+    </div>
+  </div>
+</div>
+
+<!-- COBERTURA PANEL -->
+<div id="panel-cobertura" class="panel">
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="label">Promedio Philips 2025</div><div class="value">89</div><div class="sub">clientes promedio por categoría</div></div>
+    <div class="metric-card"><div class="label">Promedio Versuni 2025</div><div class="value">145</div><div class="sub">clientes promedio por categoría</div></div>
+    <div class="metric-card"><div class="label">Top Philips 2025</div><div class="value">Cuchillas</div><div class="sub">250 clientes</div></div>
+    <div class="metric-card"><div class="label">Top Versuni 2025</div><div class="value">Licuadoras</div><div class="sub">654 clientes</div></div>
+  </div>
+
+  <div class="full-card" style="margin-bottom:1.5rem;">
+    <div class="card-title">Cobertura de clientes — Philips Chilena S.A.</div>
+    <div class="cob-table-wrap">
+    <table class="cob-table">
+      <thead>
+        <tr>
+          <th>Categoría</th>
+          <th class="num">2021</th>
+          <th class="num">2022</th>
+          <th class="num">2023</th>
+          <th class="num">2024</th>
+          <th class="num">2025</th>
+          <th class="num">2026</th>
+          <th class="num">Promedio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="cat">AFEITADORAS</td><td class="num">5</td><td class="num">2</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">1</td></tr>
+        <tr><td class="cat">ALISADORES</td><td class="num">215</td><td class="num">264</td><td class="num">215</td><td class="num">220</td><td class="num">241</td><td class="num">92</td><td class="num">208</td></tr>
+        <tr><td class="cat">BATIDORAS</td><td class="num">228</td><td class="num">102</td><td class="num">1</td><td class="num">3</td><td class="num">1</td><td class="num">0</td><td class="num">56</td></tr>
+        <tr><td class="cat">BODYGROOM</td><td class="num">163</td><td class="num">20</td><td class="num">42</td><td class="num">6</td><td class="num">3</td><td class="num">0</td><td class="num">39</td></tr>
+        <tr><td class="cat">COCCIÓN AL VAPOR</td><td class="num">17</td><td class="num">1</td><td class="num">0</td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">3</td></tr>
+        <tr><td class="cat">COMBOS</td><td class="num">66</td><td class="num">71</td><td class="num">64</td><td class="num">40</td><td class="num">58</td><td class="num">0</td><td class="num">50</td></tr>
+        <tr><td class="cat">CORTABARBAS</td><td class="num">126</td><td class="num">95</td><td class="num">64</td><td class="num">69</td><td class="num">79</td><td class="num">35</td><td class="num">78</td></tr>
+        <tr><td class="cat">CORTAPELOS</td><td class="num">173</td><td class="num">228</td><td class="num">217</td><td class="num">193</td><td class="num">194</td><td class="num">72</td><td class="num">180</td></tr>
+        <tr><td class="cat">CUCHILLAS</td><td class="num">115</td><td class="num">184</td><td class="num">202</td><td class="num">212</td><td class="num">250</td><td class="num">139</td><td class="num">184</td></tr>
+        <tr><td class="cat">DEPILADORAS</td><td class="num">198</td><td class="num">272</td><td class="num">150</td><td class="num">148</td><td class="num">200</td><td class="num">63</td><td class="num">172</td></tr>
+        <tr><td class="cat">FREIDORAS</td><td class="num">0</td><td class="num">0</td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+        <tr><td class="cat">JARRAS ELÉCTRICAS</td><td class="num">134</td><td class="num">34</td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">28</td></tr>
+        <tr><td class="cat">JUGUERAS</td><td class="num">91</td><td class="num">10</td><td class="num">15</td><td class="num">0</td><td class="num">1</td><td class="num">0</td><td class="num">20</td></tr>
+        <tr><td class="cat">LICUADORAS</td><td class="num">327</td><td class="num">69</td><td class="num">25</td><td class="num">1</td><td class="num">3</td><td class="num">1</td><td class="num">71</td></tr>
+        <tr><td class="cat">MIXERS</td><td class="num">86</td><td class="num">5</td><td class="num">6</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">17</td></tr>
+        <tr><td class="cat">MULTIGROOM</td><td class="num">150</td><td class="num">167</td><td class="num">109</td><td class="num">165</td><td class="num">175</td><td class="num">52</td><td class="num">136</td></tr>
+        <tr><td class="cat">ONDULADORAS</td><td class="num">117</td><td class="num">82</td><td class="num">76</td><td class="num">75</td><td class="num">89</td><td class="num">26</td><td class="num">78</td></tr>
+        <tr><td class="cat">ONEBLADES</td><td class="num">302</td><td class="num">357</td><td class="num">325</td><td class="num">430</td><td class="num">432</td><td class="num">180</td><td class="num">338</td></tr>
+        <tr><td class="cat">PLANCHAS DE ROPA</td><td class="num">172</td><td class="num">22</td><td class="num">11</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">35</td></tr>
+        <tr><td class="cat">PROCESADORES</td><td class="num">299</td><td class="num">6</td><td class="num">3</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">52</td></tr>
+        <tr><td class="cat">ROTATIVAS</td><td class="num">160</td><td class="num">219</td><td class="num">149</td><td class="num">257</td><td class="num">176</td><td class="num">48</td><td class="num">168</td></tr>
+        <tr><td class="cat">SANDWICHERAS</td><td class="num">9</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr>
+        <tr><td class="cat">SECADORES DE CABELLO</td><td class="num">309</td><td class="num">244</td><td class="num">185</td><td class="num">210</td><td class="num">230</td><td class="num">54</td><td class="num">205</td></tr>
+        <tr><td class="cat">VAPORIZADORES</td><td class="num">31</td><td class="num">4</td><td class="num">3</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">6</td></tr>
+        <tr class="avg-row"><td class="cat">PROMEDIO</td><td class="num">146</td><td class="num">102</td><td class="num">78</td><td class="num">85</td><td class="num">89</td><td class="num">32</td><td class="num">89</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="full-card">
+    <div class="card-title">Cobertura de clientes — Versuni Chile S.A. (Philips Domestic)</div>
+    <div class="cob-table-wrap">
+    <table class="cob-table">
+      <thead>
+        <tr>
+          <th>Categoría</th>
+          <th class="num">2021</th>
+          <th class="num">2022</th>
+          <th class="num">2023</th>
+          <th class="num">2024</th>
+          <th class="num">2025</th>
+          <th class="num">2026</th>
+          <th class="num">Promedio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="cat">BATIDORAS</td><td class="num">65</td><td class="num">140</td><td class="num">127</td><td class="num">186</td><td class="num">215</td><td class="num">70</td><td class="num">134</td></tr>
+        <tr><td class="cat">FREIDORAS</td><td class="num">52</td><td class="num">87</td><td class="num">85</td><td class="num">109</td><td class="num">203</td><td class="num">88</td><td class="num">104</td></tr>
+        <tr><td class="cat">JARRAS ELÉCTRICAS</td><td class="num">52</td><td class="num">70</td><td class="num">67</td><td class="num">65</td><td class="num">152</td><td class="num">37</td><td class="num">74</td></tr>
+        <tr><td class="cat">JUGUERAS</td><td class="num">0</td><td class="num">0</td><td class="num">124</td><td class="num">118</td><td class="num">89</td><td class="num">38</td><td class="num">62</td></tr>
+        <tr><td class="cat">LICUADORAS</td><td class="num">557</td><td class="num">683</td><td class="num">621</td><td class="num">548</td><td class="num">654</td><td class="num">303</td><td class="num">561</td></tr>
+        <tr><td class="cat">MIXERS</td><td class="num">84</td><td class="num">151</td><td class="num">130</td><td class="num">123</td><td class="num">141</td><td class="num">60</td><td class="num">115</td></tr>
+        <tr><td class="cat">PLANCHAS DE ROPA</td><td class="num">290</td><td class="num">382</td><td class="num">287</td><td class="num">349</td><td class="num">223</td><td class="num">131</td><td class="num">277</td></tr>
+        <tr><td class="cat">PROCESADORES</td><td class="num">0</td><td class="num">191</td><td class="num">224</td><td class="num">225</td><td class="num">281</td><td class="num">137</td><td class="num">176</td></tr>
+        <tr><td class="cat">VAPORIZADORES</td><td class="num">52</td><td class="num">75</td><td class="num">63</td><td class="num">58</td><td class="num">99</td><td class="num">47</td><td class="num">66</td></tr>
+        <tr><td class="cat">CAFETERAS</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">72</td><td class="num">41</td><td class="num">19</td></tr>
+        <tr><td class="cat">LIMPIADOR DE ZAPATOS</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">24</td><td class="num">16</td><td class="num">3</td><td class="num">7</td></tr>
+        <tr><td class="cat">OLLAS ELÉCTRICAS</td><td class="num">49</td><td class="num">60</td><td class="num">5</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">20</td></tr>
+        <tr><td class="cat">PURIFICADORES</td><td class="num">0</td><td class="num">1</td><td class="num">4</td><td class="num">7</td><td class="num">2</td><td class="num">0</td><td class="num">2</td></tr>
+        <tr><td class="cat">QUITAPELUSAS DE ROPA</td><td class="num">57</td><td class="num">43</td><td class="num">43</td><td class="num">44</td><td class="num">89</td><td class="num">18</td><td class="num">49</td></tr>
+        <tr><td class="cat">TOSTADORAS</td><td class="num">33</td><td class="num">28</td><td class="num">83</td><td class="num">65</td><td class="num">172</td><td class="num">48</td><td class="num">72</td></tr>
+        <tr class="avg-row"><td class="cat">PROMEDIO</td><td class="num">97</td><td class="num">124</td><td class="num">114</td><td class="num">124</td><td class="num">145</td><td class="num">58</td><td class="num">110</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- INSIGHTS PANEL -->
+<div id="panel-insights" class="panel">
+  <p class="section-label">Señales de alerta</p>
+  <div class="insight-grid">
+    <div class="insight-card warn">
+      <div class="i-label">Caída sostenida</div>
+      <div class="i-text">Secadores, Rotativas y Cortabarbas de Philips llevan 3+ años en descenso sin recuperación.</div>
+    </div>
+    <div class="insight-card warn">
+      <div class="i-label">Versuni desacelera</div>
+      <div class="i-text">Licuadoras bajaron de 20.683 (2024) a 17.824 (2025). Planchas de ropa se desplomaron −58% en un año.</div>
+    </div>
+  </div>
+
+  <p class="section-label">Oportunidades</p>
+  <div class="insight-grid">
+    <div class="insight-card good">
+      <div class="i-label">Oneblades — estrella</div>
+      <div class="i-text">Único producto Philips con crecimiento sostenido: de 3.471 (2021) a 8.733 (2025). Motor del portafolio.</div>
+    </div>
+    <div class="insight-card good">
+      <div class="i-label">Cafeteras emergentes</div>
+      <div class="i-text">Versuni lanzó cafeteras recién en 2025 (460 unidades). Categoría con alto potencial de crecimiento.</div>
+    </div>
+    <div class="insight-card good">
+      <div class="i-label">Cuchillas en alza</div>
+      <div class="i-text">Cuchillas Philips creció 8× desde 2021. Complementa Oneblades y sigue en expansión.</div>
+    </div>
+  </div>
+
+  <p class="section-label">Contexto estratégico</p>
+  <div class="insight-grid">
+    <div class="insight-card info">
+      <div class="i-label">División de portafolios</div>
+      <div class="i-text">Philips Chilena se especializó en grooming/cuidado personal. Versuni tomó los electrodomésticos del hogar.</div>
+    </div>
+    <div class="insight-card info">
+      <div class="i-label">Cruce 2022</div>
+      <div class="i-text">Versuni superó a Philips en volumen en 2022 y amplió la brecha en 2023–2024. En 2025 ambos cayeron.</div>
+    </div>
+    <div class="insight-card info">
+      <div class="i-label">Concentración de riesgo</div>
+      <div class="i-text">Versuni depende un 55% de Licuadoras. Philips depende un 34% de Oneblades. Alta concentración en ambos casos.</div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>Reporte generado con datos 2021–2026 · Philips Chilena S.A. + Versuni Chile S.A. · 2026 datos parciales</footer>
+
+<script>
+const years = [2021,2022,2023,2024,2025,2026];
+
+const philipsData = {
+  "ONEBLADES": [3471,6529,6673,7375,8733,2936],
+  "CUCHILLAS": [408,1114,2410,2539,3618,1468],
+  "DEPILADORAS": [1768,2437,3286,1225,2543,348],
+  "MULTIGROOM": [1513,3067,1771,2004,2126,393],
+  "ALISADORES": [1412,2301,2296,1481,1937,664],
+  "CORTAPELOS": [1494,2480,2526,1940,1803,478],
+  "SECADORES": [2955,2258,1914,1736,1777,250],
+  "ROTATIVAS": [1456,2794,2249,2466,1645,267],
+  "CORTABARBAS": [1167,960,637,594,629,209],
+  "ONDULADORAS": [481,376,532,292,348,134],
+  "COMBOS": [124,237,298,112,158,0],
+  "BATIDORAS": [1413,516,1,3,1,0],
+  "BODYGROOM": [871,122,469,10,0,0],
+  "LICUADORAS": [4392,221,15,-1,1,-1],
+  "JARRAS ELÉCTR.": [1108,223,1,0,0,0],
+  "PLANCHAS ROPA": [2199,25,-2,-1,0,0],
+};
+
+const versuniData = {
+  "LICUADORAS": [8811,14275,20571,20683,17824,4785],
+  "PLANCHAS ROPA": [3093,6227,6229,7474,3108,1481],
+  "PROCESADORES": [0,1209,2172,1921,2231,728],
+  "FREIDORAS": [522,926,868,1052,1521,568],
+  "JARRAS ELÉCTR.": [674,873,816,838,1517,379],
+  "TOSTADORAS": [259,112,653,531,1132,260],
+  "BATIDORAS": [458,699,1333,1385,1052,258],
+  "MIXERS": [951,1374,1472,899,1001,282],
+  "VAPORIZADORES": [482,687,822,433,983,334],
+  "QUITAPELUSAS": [192,289,415,393,773,111],
+  "JUGUERAS": [0,0,960,693,520,245],
+  "CAFETERAS": [0,0,0,0,460,161],
+  "LIMPIADOR ZAPATOS": [0,0,0,51,56,6],
+};
+
+const philipsTotals = [29409,25673,25091,21778,25322,7146];
+const versuniTotals = [15854,26992,36321,36409,32180,9598];
+
+// SKU data: {categoria: [{code, desc, stock, disc, years:[v2021..v2026]}]}
+const philipsSKUs = {
+  "ALISADORES": [
+    {code:"PH240", desc:"ALISADOR PHILIPS HP8321/00 210°C 240V", stock:632, disc:"S"},
+    {code:"PH243", desc:"CEPILLO ALISADOR PHILIPS BHH880/00 CERAMICA TURMALINA", stock:588, disc:"N"},
+    {code:"PH349", desc:"ALISADOR DE CABELLO PHILIPS BHS515/00", stock:107, disc:"N"},
+    {code:"PH350", desc:"ALISADOR DE CABELLO PHILIPS BHS520/00", stock:88, disc:"S"},
+    {code:"PH351", desc:"ALISADOR DE CABELLO PHILIPS BHS530/00", stock:15, disc:"N"},
+    {code:"PH352", desc:"ALISADOR PARA CABELLO PHILIPS BHS732/00", stock:298, disc:"S"},
+    {code:"PH353", desc:"ALISADOR PARA CABELLO PHILIPS BHS752/00", stock:248, disc:"N"},
+  ],
+  "COMBOS": [
+    {code:"PH437", desc:"SECADOR DE PELO PHILIPS BHD837/00", stock:0, disc:"N"},
+  ],
+  "CORTABARBAS": [
+    {code:"PH220", desc:"CORTABARBAS PHILIPS BT3206/14 SERIE 3000 1 ACC", stock:13, disc:"S"},
+    {code:"PH406", desc:"CORTABARBAS PHILIPS BT3232/15 SERIE 3000 3 ACC", stock:48, disc:"S"},
+  ],
+  "CORTAPELOS": [
+    {code:"PH277", desc:"CORTAPELOS PHILIPS HC3505/15 SERIES 3000 1 ACC", stock:388, disc:"N"},
+    {code:"PH361", desc:"CORTAPELOS PHILIPS HC7650/15 SERIE 7000 8ACC", stock:246, disc:"S"},
+    {code:"PH365", desc:"CORTAPELOS PHILIPS HC3525/15 SERIE 3000 2 ACC", stock:212, disc:"N"},
+    {code:"PH426", desc:"CORTABARBAS PHILIPS BT3617/15", stock:0, disc:"N"},
+    {code:"PH433", desc:"MULTIGROOM PHILIPS MG3931/15 DUAL CUT 10 ACC LAVABLE 220V", stock:0, disc:"N"},
+    {code:"PH434", desc:"MULTIGROOM PHILIPS MG3921/15 DUAL CUT 12 ACC LAVABLE 220V", stock:0, disc:"N"},
+  ],
+  "CUCHILLAS": [
+    {code:"PH375", desc:"CUCHILLA DE REPUESTO PHILIPS ONEBLADE QP220/51 PACK DE 2", stock:913, disc:"N"},
+  ],
+  "DEPILADORAS": [
+    {code:"PH264", desc:"DEPILADORA PHILIPS BRE285/00 OPTI-LIGHT 7 ACC PIERNAS 2VL", stock:9, disc:"S"},
+    {code:"PH303", desc:"DEPILADORA PHILIPS BRE275/00 OPTI-LIGHT 4 ACC PIERNAS Y CUERPO", stock:15, disc:"S"},
+    {code:"PH317", desc:"AFEITADORA PHILIPS WOMAN HP6306/00 C/ PILAS", stock:580, disc:"N"},
+    {code:"PH325", desc:"RECORTADOR/PERFILADOR PHILIPS HP6389/00 C/ PILAS", stock:673, disc:"S"},
+    {code:"PH340", desc:"DEPILADORA IPL PHILIPS LUMEA PRESTIGE BRI947/00 SERIE 9000 240V", stock:0, disc:"N"},
+    {code:"PH435", desc:"DEPILADORA PHILIPS BRE227/00 SATINELLE PIERNA 220V", stock:1060, disc:"N"},
+  ],
+  "MULTIGROOM": [],
+  "ONDULADORAS": [
+    {code:"PH268", desc:"ONDULADOR PHILIPS BHB862/00 CERAMICA 200°C 220V", stock:49, disc:"S"},
+  ],
+  "ONEBLADES": [
+    {code:"PH394", desc:"AFEITADORA PHILIPS QP2724/10 ONEBLADE", stock:2198, disc:"N"},
+    {code:"PH395", desc:"AFEITADORA PHILIPS QP1424/10 ONEBLADE", stock:281, disc:"N"},
+    {code:"PH402", desc:"AFEITADORA ONEBLADE QP2824/10 FACE+BODY", stock:5, disc:"N"},
+    {code:"PH425", desc:"AFEITADORA PHILIPS QP6532/10 ONEBLADE PRO", stock:263, disc:"N"},
+  ],
+  "ROTATIVAS": [
+    {code:"PH328", desc:"AFEITADORA PHILIPS S5588/17", stock:4, disc:"S"},
+    {code:"PH342", desc:"AFEITADORA ELECTRICA PHILIPS S1323/41 AQUATOUCH ROTATIVO", stock:5, disc:"S"},
+    {code:"PH405", desc:"AFEITADORA ROTATIVA PHILIPS S1151/00 SERIE 100 CARGA USB", stock:3, disc:"N"},
+    {code:"PH422", desc:"AFEITADORA ROTATIVA PHILIPS SERIE 1000 S1881/02", stock:520, disc:"S"},
+  ],
+  "SECADORES": [
+    {code:"PH283", desc:"SECADOR DE PELO PHILIPS BHC010/10 3 VEL PARA VIAJE 1200W 220V", stock:512, disc:"N"},
+    {code:"PH345", desc:"SECADOR DE CABELLO PHILIPS HP8280/00", stock:4, disc:"S"},
+    {code:"PH346", desc:"SECADOR DE CABELLO PHILIPS BHD351/10", stock:200, disc:"N"},
+    {code:"PH348", desc:"SECADOR DE CABELLO PHILIPS BHD514/00", stock:391, disc:"N"},
+    {code:"PH355", desc:"SECADOR DE PELO PHILIPS BHD360/20 CON 1 DIFUSOR Y 1 BOQUILLA", stock:6, disc:"N"},
+    {code:"PH358", desc:"SECADOR DE CABELLO PHILIPS BHD530/00", stock:353, disc:"S"},
+  ],
+  "BATIDORAS": [],
+  "BODYGROOM": [],
+  "LICUADORAS": [],
+  "JARRAS ELÉCTR.": [],
+  "PLANCHAS ROPA": [],
+};
+
+const versuniSKUs = {
+  "LICUADORAS": [
+    {code:"PH150", desc:"SOUPMAKER PHILIPS HR2203/80 1000W 1,2L 5 PROG JARRA INOX", stock:5, disc:"S"},
+    {code:"PH252", desc:"LICUADORA PHILIPS WALITA RI2110/90 2V PROBLEND 4 550W 220V", stock:4301, disc:"N"},
+    {code:"PH297", desc:"LICUADORA PHILIPS HR2604/80 JAR ACRIL REFOR 0.6ML 2VEL", stock:7, disc:"S"},
+    {code:"PH333", desc:"LICUADORA PHILIPS HR2240/90 1200W 3L NEGRO/5V", stock:507, disc:"N"},
+    {code:"PH334", desc:"LICUADORA PHILIPS HR2242/90 VIDRIO 2L 12 VEL NEGRO 1200W", stock:355, disc:"N"},
+    {code:"PH341", desc:"LICUADORA PHILIPS HR2242/92 1200W 3L NEGRO 12V JARRA DURAVITA", stock:205, disc:"N"},
+    {code:"PH370", desc:"LICUADORA PHILIPS HR2240/00 3LTS 5 VEL. BLANCO 1200W", stock:8, disc:"S"},
+    {code:"PH399", desc:"LICUADORA PHILIPS HR3760 00 SERIE 7000 1500W 2L NEGRO 12V", stock:10, disc:"N"},
+    {code:"PH412", desc:"LICUADORA PHILIPS WALITA RI2110/30 2V PROBLEND 4 550W 220V", stock:6, disc:"S"},
+    {code:"PH413", desc:"LICUADORA PHILIPS HR2126/90 CON FILTRO 3V 500W 220V 50HZ", stock:347, disc:"N"},
+    {code:"PH419", desc:"LICUADORA PHILIPS HR2291/41 CARAMBOLA 2L 2V 600W CRISTAL", stock:1, disc:"N"},
+    {code:"PH424", desc:"LICUADORA PHILIPS WALITA RI2112/90 C/ FILTRO 2V 600W 220V", stock:697, disc:"N"},
+    {code:"PH428", desc:"LICUADORA PHILIPS HR2263/90 2LTS 12 VEL. 1200W", stock:71, disc:"N"},
+  ],
+  "PLANCHAS ROPA": [
+    {code:"PH319", desc:"PLANCHA A VAPOR PHILIPS GC1740/20 2000W 25G/MIN SUELA ANTIADH.", stock:2, disc:"N"},
+    {code:"PH398", desc:"PLANCHA SECA PHILIPS DST0520/20 1200W", stock:26, disc:"N"},
+    {code:"PH418", desc:"PLANCHA A VAPOR PHILIPS DST2020/30 2000W 250ML 220V", stock:2, disc:"N"},
+  ],
+  "PROCESADORES": [
+    {code:"PH380", desc:"MULTIPROCESADOR PHILIPS HR7301/90 750W 2V/4 ACCESORIOS", stock:26, disc:"N"},
+    {code:"PH385", desc:"MULTIPROCESADOR PHILIPS HR7302/90 750W 2V/6 ACCESORIOS", stock:276, disc:"N"},
+    {code:"PH400", desc:"PICADORA DE ALIMENTOS PHILIPS HR1393/00 450W 700ML BOWL PLÁSTICO", stock:920, disc:"S"},
+    {code:"PH415", desc:"MULTIPROCESADOR PHILIPS WALITA RI7300/92 600W 2V 3 ACCESORIOS", stock:286, disc:"N"},
+    {code:"PH416", desc:"MULTIPROCESADOR PHILIPS WALITA RI7301/90 750W 2V/4 ACCESORIOS", stock:353, disc:"N"},
+  ],
+  "FREIDORAS": [
+    {code:"PH311", desc:"FREIDORA PHILIPS HD9218/70 AIRFRYER 800g/3.5L 1425W Negro", stock:5, disc:"S"},
+    {code:"PH368", desc:"FREIDORA PHILIPS HD9270/91 AIRFRYER XL 1.2kg/6.2L NEGRO 2000W", stock:5, disc:"S"},
+    {code:"PH393", desc:"FREIDORA PHILIPS AIRFRYER HD9218/71 800GR/3.2L NEGRO 1425W", stock:4, disc:"S"},
+    {code:"PH408", desc:"FREIDORA PHILIPS NA120/00 AIRFRYER 4.2LTS 1500W", stock:455, disc:"N"},
+    {code:"PH411", desc:"FREIDORA PHILIPS AIRFRYER SERIE 2000 NA220/00 4.2L NEGRO", stock:274, disc:"N"},
+    {code:"PH417", desc:"FREIDORA PHILIPS XL NA231/00 6,2LTS 1700W", stock:196, disc:"N"},
+    {code:"PH420", desc:"HORNO FREIDORA PHILIPS AI551/07 12LTS 1900W 3ACC", stock:165, disc:"N"},
+  ],
+  "JARRAS ELÉCTR.": [
+    {code:"PH256", desc:"HERVIDORA ELECTRICA PHILIPS HD9350/90 INOX 1.7L 1850W 220V", stock:5, disc:"N"},
+    {code:"PH429", desc:"HD9396/90 HERVIDORA PHILIPS DIGITAL ELÉCTRICA 1.7L 2200W", stock:105, disc:"N"},
+  ],
+  "TOSTADORAS": [
+    {code:"PH397", desc:"TOSTADORA PHILIPS HD2581/10 GRAFITO 900W 8 AJUSTES REJILLA", stock:184, disc:"N"},
+  ],
+  "BATIDORAS": [
+    {code:"PH327", desc:"BATIDORA c/ BOWL PHILIPS HR7200/50 AZUL 400W 5 VEL. + TURBO 3.5L", stock:765, disc:"S"},
+  ],
+  "MIXERS": [
+    {code:"PH313", desc:"MIXER PHILIPS HR2626/80 NEW VIVA 600W C/BATIDOR+PICADORA 350ML", stock:143, disc:"N"},
+    {code:"PH337", desc:"MIXER PHILIPS HR2531/50 400W 1V+TURBO C/VASO", stock:296, disc:"N"},
+    {code:"PH414", desc:"MIXER PHILIPS WALITA RI2622/40 400W 4 ACC", stock:24, disc:"N"},
+  ],
+  "VAPORIZADORES": [
+    {code:"PH401", desc:"PLANCHA DE VAPOR PORTATIL PHILIPS STH1010 10 SERIE 1000 900W", stock:226, disc:"N"},
+    {code:"PH427", desc:"PLANCHA VAPORIZADOR VERTICAL PHILIPS STE1020/40 1800W", stock:144, disc:"N"},
+  ],
+  "QUITAPELUSAS": [
+    {code:"PH285", desc:"QUITA PELUSAS PHILIPS GC026/00 TODO TIPO ROPA CON PILAS AA", stock:150, disc:"N"},
+  ],
+  "JUGUERAS": [
+    {code:"PH78", desc:"JUGUERA PHILIPS HR1832/00 DEP/PULPA 1/5L JAR P/ZUM 500ML 1VEL 500W", stock:322, disc:"N"},
+  ],
+  "CAFETERAS": [
+    {code:"PH410", desc:"CAFETERA DE GOTEO PHILIPS HD7430/90 SERIE 1000", stock:488, disc:"N"},
+    {code:"PH430", desc:"EP5547/90 CAFETERA ESPRESSO PHILIPS 20B SERIE 5500", stock:107, disc:"N"},
+    {code:"PH431", desc:"EP1224/00 CAFETERA ESPRESSO PHILIPS 2B SERIE 1200", stock:77, disc:"N"},
+    {code:"PH432", desc:"EP3341/30 CAFETERA ESPRESSO PHILIPS 6B SERIE 3300", stock:26, disc:"N"},
+  ],
+  "LIMPIADOR ZAPATOS": [
+    {code:"PH404", desc:"LIMPIA ZAPATOS PHILIPS GCA1000/60 3 CEPILLOS 4 PILAS AA", stock:47, disc:"S"},
+  ],
+};
+
+function totalVentas(arr) { return arr.reduce((a,b) => a+Math.max(0,b),0); }
+function trend(arr) {
+  const v = arr.filter(x => x > 0);
+  if (v.length < 2) return 'flat';
+  const p = (v[v.length-1]-v[v.length-2])/v[v.length-2];
+  return p > 0.05 ? 'up' : p < -0.05 ? 'down' : 'flat';
+}
+
+const chartInstances = {};
+
+function makeBarChart(id, labels, data, color) {
+  if (chartInstances[id]) chartInstances[id].destroy();
+  // Build variation labels for x-axis: year + % change vs previous
+  const varLabels = labels.map((yr, i) => {
+    if (i === 0) return [String(yr), ''];
+    const prev = data[i-1], cur = data[i];
+    if (!prev || prev <= 0) return [String(yr), ''];
+    const pct = ((cur - prev) / prev * 100).toFixed(1);
+    const sign = pct > 0 ? '+' : '';
+    return [String(yr), sign + pct + '%'];
+  });
+  chartInstances[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: varLabels, datasets: [{ data, backgroundColor: color, borderRadius: 5 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 28 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+      },
+      scales: {
+        y: { ticks: { callback: v => v>=1000?(v/1000).toFixed(0)+'K':v, font:{size:11}, color:'#9E9C96' }, grid: { color:'rgba(0,0,0,.06)' }, border: { display:false } },
+        x: { ticks: { font:{size:11}, color:'#9E9C96', maxRotation:0 }, grid: { display:false }, border: { display:false } }
+      }
+    },
+    plugins: [{
+      id: 'barLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx, data: cd, scales: { x, y } } = chart;
+        cd.datasets[0].data.forEach((val, i) => {
+          if (!val || val <= 0) return;
+          const bar = chart.getDatasetMeta(0).data[i];
+          const xPos = bar.x;
+          const yPos = bar.y;
+          // Value label
+          ctx.save();
+          ctx.font = '600 11px Syne, sans-serif';
+          ctx.fillStyle = '#1A1916';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          const valStr = val >= 1000 ? (val/1000).toFixed(1)+'K' : String(val);
+          ctx.fillText(valStr, xPos, yPos - 4);
+          // Variation label
+          if (i > 0) {
+            const prev = cd.datasets[0].data[i-1];
+            if (prev && prev > 0) {
+              const pct = ((val - prev) / prev * 100).toFixed(1);
+              const sign = pct > 0 ? '+' : '';
+              const varStr = sign + pct + '%';
+              ctx.font = '500 9.5px DM Mono, monospace';
+              ctx.fillStyle = pct > 0 ? '#0A7A5A' : '#C0392B';
+              ctx.fillText(varStr, xPos, yPos - 16);
+            }
+          }
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+function makeLineChart(id, labels, data, color, label) {
+  if (chartInstances[id]) chartInstances[id].destroy();
+  chartInstances[id] = new Chart(document.getElementById(id), {
+    type: 'line',
+    data: { labels, datasets: [{ label, data, borderColor: color, backgroundColor: color+'18', borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 5, pointBackgroundColor: color, pointBorderColor: '#fff', pointBorderWidth: 2 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { callback: v => v>=1000?(v/1000).toFixed(1)+'K':v, font:{size:11}, color:'#9E9C96' }, grid: { color:'rgba(0,0,0,.06)' }, border: { display:false } },
+        x: { ticks: { font:{size:11}, color:'#9E9C96' }, grid: { display:false }, border: { display:false } }
+      }
+    }
+  });
+}
+
+function buildCatList(containerId, data, color) {
+  const container = document.getElementById(containerId);
+  const cats = Object.keys(data).sort((a,b) => totalVentas(data[b]) - totalVentas(data[a])).slice(0,10);
+  const maxT = totalVentas(data[cats[0]]);
+  container.innerHTML = cats.map(cat => {
+    const t = totalVentas(data[cat]);
+    const pct = (t/maxT*100).toFixed(0);
+    return `<div class="cat-item">
+      <span class="cat-name" title="${cat}">${cat}</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="cat-num">${(t/1000).toFixed(1)}K</span>
+    </div>`;
+  }).join('');
+}
+
+function buildSelect(selId, data) {
+  const sel = document.getElementById(selId);
+  const cats = Object.keys(data).sort((a,b) => totalVentas(data[b])-totalVentas(data[a]));
+  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function buildSKUTable(wrapId, skuMap, cat, catData) {
+  const wrap = document.getElementById(wrapId);
+  const skus = (skuMap[cat] || []).map(s => Object.assign({}, s));
+  if (!skus.length) { wrap.innerHTML = ''; return; }
+
+  // Attach yearly sales totals to each SKU (not available per-SKU in data, so show category totals row only)
+  // Sort: by stock desc (we don't have per-SKU sales data, so sort by stock desc as primary, disc as secondary)
+  // Since we DO have category-level yearly data, show it as a summary row
+  // Sort SKUs: activos first (disc=N) then discontinuados, within each group by stock desc
+  skus.sort((a, b) => {
+    if (a.disc !== b.disc) return a.disc === 'N' ? -1 : 1;
+    return b.stock - a.stock;
+  });
+
+  const discCount = skus.filter(s => s.disc === 'S').length;
+  const totalStock = skus.reduce((a,s) => a + s.stock, 0);
+  const catYears = catData || [];
+
+  let html = `<table class="sku-table">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Descripción artículo</th>
+        <th class="num">Stock</th>
+        <th class="num">Estado</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  skus.forEach(s => {
+    const discTag = s.disc === 'S' ? '<span class="disc-badge">Discontinuado</span>' : '';
+    const stockClass = s.stock > 0 ? 'stock-ok' : 'stock-zero';
+    const stockStr = s.stock > 0 ? s.stock.toLocaleString('es-CL') : '—';
+    html += `<tr>
+      <td class="code">${s.code}</td>
+      <td class="desc">${s.desc}${discTag}</td>
+      <td class="num"><span class="${stockClass}">${stockStr}</span></td>
+      <td class="num">${s.disc === 'S' ? '<span style="color:var(--red);font-size:.68rem;">● Discontinuado</span>' : '<span style="color:var(--teal);font-size:.68rem;">● Activo</span>'}</td>
+    </tr>`;
+  });
+
+  html += `</tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="2">Total (${skus.length} SKUs · ${discCount} discontinuados)</td>
+        <td class="num">${totalStock.toLocaleString('es-CL')}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>`;
+
+  // Ventas por año de la categoría
+  if (catYears.length) {
+    html += `<div style="margin-top:1.2rem;">
+      <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">Ventas totales de la categoría por año</div>
+      <table class="sku-table">
+        <thead><tr>
+          <th>Categoría</th>
+          ${years.map(y => `<th class="num">${y}</th>`).join('')}
+          <th class="num">Total</th>
+        </tr></thead>
+        <tbody><tr>
+          <td class="code">${cat}</td>
+          ${catYears.map(v => `<td class="${v > 0 ? 'num' : 'zero'}">${v > 0 ? v.toLocaleString('es-CL') : '—'}</td>`).join('')}
+          <td class="num" style="font-weight:700;">${catYears.reduce((a,v)=>a+Math.max(0,v),0).toLocaleString('es-CL')}</td>
+        </tr></tbody>
+      </table>
+    </div>`;
+  }
+
+  wrap.innerHTML = html;
+}
+
+function updateLine(prefix, cat) {
+  const data = prefix === 'p' ? philipsData : versuniData;
+  const skuMap = prefix === 'p' ? philipsSKUs : versuniSKUs;
+  const color = prefix === 'p' ? '#1A4FD4' : '#0A7A5A';
+  const catYears = data[cat] || [];
+  makeLineChart(`${prefix}-line`, years, catYears, color, cat);
+  buildSKUTable(`${prefix}-sku-wrap`, skuMap, cat, catYears);
+}
+
+function buildCompare() {
+  if (chartInstances['c-compare']) chartInstances['c-compare'].destroy();
+  chartInstances['c-compare'] = new Chart(document.getElementById('c-compare'), {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        { label:'Philips Chilena', data:philipsTotals, borderColor:'#1A4FD4', backgroundColor:'#1A4FD418', borderWidth:2.5, fill:true, tension:0.35, pointRadius:5, pointBackgroundColor:'#1A4FD4', pointBorderColor:'#fff', pointBorderWidth:2 },
+        { label:'Versuni Chile', data:versuniTotals, borderColor:'#0A7A5A', backgroundColor:'#0A7A5A18', borderWidth:2.5, fill:true, tension:0.35, pointRadius:5, pointBackgroundColor:'#0A7A5A', pointBorderColor:'#fff', pointBorderWidth:2, borderDash:[7,4] }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        y:{ ticks:{callback:v=>(v/1000).toFixed(0)+'K',font:{size:11},color:'#9E9C96'}, grid:{color:'rgba(0,0,0,.06)'}, border:{display:false} },
+        x:{ ticks:{font:{size:11},color:'#9E9C96'}, grid:{display:false}, border:{display:false} }
+      }
+    }
+  });
+
+  if (chartInstances['c-share']) chartInstances['c-share'].destroy();
+  const shareP = years.map((_, i) => {
+    const total = philipsTotals[i] + versuniTotals[i];
+    return +(philipsTotals[i]/total*100).toFixed(1);
+  });
+  const shareV = shareP.map(p => +(100-p).toFixed(1));
+  chartInstances['c-share'] = new Chart(document.getElementById('c-share'), {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [
+        { label:'Philips Chilena', data:shareP, backgroundColor:'#1A4FD4', borderRadius:4 },
+        { label:'Versuni Chile', data:shareV, backgroundColor:'#0A7A5A', borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ stacked:true, ticks:{font:{size:11},color:'#9E9C96'}, grid:{display:false}, border:{display:false} },
+        y:{ stacked:true, min:0, max:100, ticks:{callback:v=>v+'%',font:{size:11},color:'#9E9C96'}, grid:{color:'rgba(0,0,0,.06)'}, border:{display:false} }
+      }
+    }
+  });
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// Init
+const pCols = ['#1A4FD4','#2563EB','#3B82F6','#60A5FA','#93C5FD','#BFDBFE'];
+makeBarChart('p-totals', years, philipsTotals, pCols);
+buildCatList('p-catlist', philipsData, '#1A4FD4');
+buildSelect('p-sel', philipsData);
+const pFirst = Object.keys(philipsData).sort((a,b)=>totalVentas(philipsData[b])-totalVentas(philipsData[a]))[0];
+updateLine('p', pFirst);
+
+const vCols = ['#0A7A5A','#059669','#10B981','#34D399','#6EE7B7','#A7F3D0'];
+makeBarChart('v-totals', years, versuniTotals, vCols);
+buildCatList('v-catlist', versuniData, '#0A7A5A');
+buildSelect('v-sel', versuniData);
+const vFirst = Object.keys(versuniData).sort((a,b)=>totalVentas(versuniData[b])-totalVentas(versuniData[a]))[0];
+updateLine('v', vFirst);
+
+buildCompare();
+</script>
+</body>
+</html>
